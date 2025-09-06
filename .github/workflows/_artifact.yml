@@ -22,9 +22,9 @@ jobs:
             makefile: Makefile.Win32
             outfile_ext: .exe
             shell: msys2 {0}
-          - os: ubuntu-latest
-            makefile: Makefile.UNIX
-            shell: bash
+          # - os: ubuntu-latest
+          #   makefile: Makefile.UNIX
+          #   shell: bash
           # - os: macos-latest
           #   makefile: Makefile.OSX
           #   shell: bash
@@ -38,11 +38,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
             repository: trzy/Supermodel
-      - name: Install ubuntu build dependencies
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          sudo apt update
-          sudo apt install -y libsdl2-dev libsdl2-net-dev libglu1-mesa-dev
+      # - name: Install ubuntu build dependencies
+      #   if: startsWith(matrix.os, 'ubuntu')
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install -y libsdl2-dev libsdl2-net-dev libglu1-mesa-dev
       - name: Install windows build dependencies
         if: startsWith(matrix.os, 'windows')
         uses: msys2/setup-msys2@v2
@@ -91,13 +91,13 @@ jobs:
         id: vars
         run: |
           echo "BUILD_DATE=$(date --rfc-3339=date)" >> $GITHUB_ENV
-      - name: Download Linux Artifact
-        uses: actions/download-artifact@master
-        with:
-          name: supermodel-Linux-X64
-          path: artifacts
-      - name: Rename
-        run: mv artifacts/supermodel-Linux-X64.tgz artifacts/supermodel-Linux-x64_${{ env.BUILD_DATE }}.tgz
+      # - name: Download Linux Artifact
+      #   uses: actions/download-artifact@master
+      #   with:
+      #     name: supermodel-Linux-X64
+      #     path: artifacts
+      # - name: Rename
+      #   run: mv artifacts/supermodel-Linux-X64.tgz artifacts/supermodel-Linux-x64_${{ env.BUILD_DATE }}.tgz
       # - name: Download Mac Artifact
       #   uses: actions/download-artifact@master
       #   with:
@@ -111,7 +111,7 @@ jobs:
           name: supermodel-Windows-X64
           path: artifacts
       - name: Rename
-        run: mv artifacts/supermodel-Windows-X64.zip artifacts/supermodel-Windows-x64_${{ env.BUILD_DATE }}.zip
+        run: mv artifacts/supermodel*.zip artifacts/supermodel-Windows-x64_${{ env.BUILD_DATE }}.zip
       - name: Create Release
         uses: softprops/action-gh-release@v2
         env:
