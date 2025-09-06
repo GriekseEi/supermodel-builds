@@ -85,7 +85,7 @@ jobs:
           mkdir NVRAM Saves ROMs GraphicsAnalysis
           cp Docs/LICENSE.txt Docs/README.txt .
           cp bin/ppcd${{ matrix.outfile_ext }} .
-          cp bin/supermodel${{ matrix.outfile_ext }} 
+          cp bin/supermodel${{ matrix.outfile_ext }} .
           echo "NVRAM files go here." > NVRAM/DIR.txt
           echo "Save states go here." > Saves/DIR.txt
           echo "Graphics Analysis go here." > GraphicsAnalysis/DIR.txt
