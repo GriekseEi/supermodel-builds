@@ -1,12 +1,9 @@
-name: _artifact
+name: supermodel-build
 
 on:
-  workflow_call:
-    inputs:
-      opt:
-        description: "make OPT value"
-        type: string
-        default: "-O3"
+  schedule:
+    - cron:  '30 5 */7 * *'
+  workflow_dispatch:
 
 jobs:
   Build:
@@ -22,18 +19,20 @@ jobs:
             makefile: Makefile.Win32
             outfile_ext: .exe
             shell: msys2 {0}
+            archive: zip
           # - os: ubuntu-latest
           #   makefile: Makefile.UNIX
           #   shell: bash
+          #   archive: tgz
           # - os: macos-latest
           #   makefile: Makefile.OSX
           #   shell: bash
+          #   archive: tgz
+          #   archive_files: Frameworks/
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: ${{ matrix.shell }}
-    env:
-      OPT_INPUT: ${{ inputs.opt }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -71,47 +70,71 @@ jobs:
       #     hdiutil detach -quiet /Volumes/SDL2_net
       - name: Compile
         run: |
-          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }}
           echo "pkg_path=$(make -f Makefiles/${{ matrix.makefile }} -j pkg/path)" >> $GITHUB_ENV
       - name: Validate
         run: ./bin/supermodel${{ matrix.outfile_ext }} -print-games
+      - name: Create Distributions
+        id: vars
+        run: |
+          ShortSHA=$(git rev-parse --short ${{ github.sha }})
+          echo "COMMIT_SHORT_SHA=$ShortSHA" >> $GITHUB_ENV
       - name: Package
         run: |
-          make -f Makefiles/${{ matrix.makefile }} pkg NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+          rm -f Config/Supermodel.ini
+          mkdir NVRAM Saves ROMs GraphicsAnalysis
+          cp Docs/LICENSE.txt Docs/README.txt .
+          cp bin/ppcd${{ matrix.outfile_ext }}
+          cp bin/supermodel${{ matrix.outfile_ext }}
+          echo "NVRAM files go here." > NVRAM/DIR.txt
+          echo "Save states go here." > Saves/DIR.txt
+          echo "Graphics Analysis go here." > GraphicsAnalysis/DIR.txt
+          echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt
+          FILES="ppcd${{ matrix.outfile_ext }} supermodel${{ matrix.outfile_ext }} LICENSE.txt README.txt FORKINFO.txt Config/ Assets/ NVRAM/ Saves/ ROMs/ GraphicsAnalysis/ ${{ matrix.archive_files }}"
+          if [[ "${{ matrix.archive }}" == "tgz" ]] ; then
+            tar -zcvf supermodel-${{ env.COMMIT_SHORT_SHA }}.tgz $FILES
+          elif [[ "${{ matrix.archive }}" == "zip" ]] ; then
+            zip -r supermodel-${{ env.COMMIT_SHORT_SHA }}.zip $FILES
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: supermodel-${{ runner.os }}-${{ runner.arch }}
-          path: ${{ env.pkg_path }}
+          path: supermodel-${{ env.COMMIT_SHORT_SHA }}.${{ matrix.archive }}
   
   Release:
     runs-on: ubuntu-latest
     needs: Build
     steps:
+      - uses: actions/checkout@v5
+        with:
+            repository: trzy/Supermodel
       - name: Set build date
         id: vars
         run: |
           echo "BUILD_DATE=$(date --rfc-3339=date)" >> $GITHUB_ENV
+          ShortSHA=$(git rev-parse --short ${{ github.sha }})
+          echo "COMMIT_SHORT_SHA=$ShortSHA" >> $GITHUB_ENV
       # - name: Download Linux Artifact
       #   uses: actions/download-artifact@master
       #   with:
       #     name: supermodel-Linux-X64
       #     path: artifacts
       # - name: Rename
-      #   run: mv artifacts/supermodel-Linux-X64.tgz artifacts/supermodel-Linux-x64_${{ env.BUILD_DATE }}.tgz
+      #   run: mv artifacts/supermodel-${{ env.COMMIT_SHORT_SHA }}.tgz artifacts/supermodel-Linux-x64_${{ env.BUILD_DATE }}.tgz
       # - name: Download Mac Artifact
       #   uses: actions/download-artifact@master
       #   with:
       #     name: supermodel-macOS-ARM64
       #     path: artifacts
       # - name: Rename
-      #   run: mv artifacts/supermodel-macOS-ARM64.tgz artifacts/supermodel-macOS-arm64_${{ env.BUILD_DATE }}.tgz
+      #   run: mv artifacts/supermodel-${{ env.COMMIT_SHORT_SHA }}.tgz artifacts/supermodel-macOS-arm64_${{ env.BUILD_DATE }}.tgz
       - name: Download Windows Artifact
         uses: actions/download-artifact@master
         with:
           name: supermodel-Windows-X64
           path: artifacts
       - name: Rename
-        run: mv artifacts/supermodel*.zip artifacts/supermodel-Windows-x64_${{ env.BUILD_DATE }}.zip
+        run: mv artifacts/supermodel-${{ env.COMMIT_SHORT_SHA }}.zip artifacts/supermodel-Windows-x64_${{ env.BUILD_DATE }}.zip
       - name: Create Release
         uses: softprops/action-gh-release@v2
         env:
