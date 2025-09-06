@@ -55,6 +55,20 @@ jobs:
             mingw64/mingw-w64-x86_64-gcc
             mingw64/mingw-w64-x86_64-SDL2
             mingw64/mingw-w64-x86_64-SDL2_net
+      - name: Install macos build dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          curl -sLo SDL2.dmg https://github.com/libsdl-org/SDL/releases/download/release-2.30.2/SDL2-2.30.2.dmg
+          curl -sLo SDL2_net.dmg https://github.com/libsdl-org/SDL_net/releases/download/release-2.2.0/SDL2_net-2.2.0.dmg
+          hdiutil attach -quiet SDL2.dmg
+          hdiutil attach -quiet SDL2_net.dmg
+          mkdir Frameworks
+          cp -r /Volumes/SDL2/SDL2.framework Frameworks/
+          cp -r /Volumes/SDL2_net/SDL2_net.framework Frameworks/
+          xattr -dr com.apple.quarantine Frameworks/SDL2.framework
+          xattr -dr com.apple.quarantine Frameworks/SDL2_net.framework
+          hdiutil detach -quiet /Volumes/SDL2
+          hdiutil detach -quiet /Volumes/SDL2_net
       - name: Compile
         run: |
           make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
