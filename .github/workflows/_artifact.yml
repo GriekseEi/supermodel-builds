@@ -42,7 +42,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt update
-          sudo apt install -y libsdl2-dev libsdl2-net-dev
+          sudo apt install -y libsdl2-dev libsdl2-net-dev libglu1-mesa-dev
       - name: Install windows build dependencies
         if: startsWith(matrix.os, 'windows')
         uses: msys2/setup-msys2@v2
